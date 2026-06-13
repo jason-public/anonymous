@@ -1,0 +1,8 @@
+{
+  "name": "시정 정책 제안 플랫폼",
+  "description": "완벽한 익명성을 보장하고 AI를 활용해 시정 정책 제안을 자동으로 요약, 카테고리 매칭 및 중복 검사를 수행하는 시민 제안 플랫폼",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
