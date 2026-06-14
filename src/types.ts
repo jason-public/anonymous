@@ -6,6 +6,14 @@ export interface Attachment {
   file_name: string;
 }
 
+export interface IdeaHistoryItem {
+  id: string;
+  status: StatusType;
+  admin_notes: string;
+  updated_at: string;
+  updated_by_nickname: string;
+}
+
 export interface Idea {
   id: string;
   title: string;
@@ -19,6 +27,7 @@ export interface Idea {
   created_at: string;
   attachments?: Attachment[];
   admin_notes?: string;
+  history?: IdeaHistoryItem[];
 }
 
 export interface UserIdeaMapping {
@@ -40,4 +49,5 @@ export interface UserProfile {
   email: string;
   nickname: string;
   role: 'User' | 'Admin';
+  is_supabase?: boolean;
 }

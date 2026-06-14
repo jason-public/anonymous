@@ -35,8 +35,10 @@ export default function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [nickname, setNickname] = useState('');
+  const [passcode, setPasscode] = useState('');
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [authError, setAuthError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
 
   // App running state (status indicator of AI Analysis engine)
@@ -131,12 +133,13 @@ export default function App() {
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
+    setSuccessMessage('');
     setAuthLoading(true);
 
     const url = authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
     const payload = authMode === 'login' 
       ? { email, password }
-      : { email, password, nickname, role: 'User' };
+      : { email, password, nickname, role: 'User', passcode };
 
     try {
       const res = await fetch(url, {
@@ -147,9 +150,14 @@ export default function App() {
 
       const data = await res.json();
       if (res.ok) {
-        setUser(data.user);
-        await fetchUserData();
-        setRefreshTrigger((prev) => prev + 1);
+        if (data.emailConfirmationRequired) {
+          setSuccessMessage(data.message || '가입 인증 메일이 성공적으로 발송되었습니다. 메일의 인증 주소를 확인해 확인해 주셔요.');
+          setAuthMode('login'); // switch to login form
+        } else {
+          setUser(data.user);
+          await fetchUserData();
+          setRefreshTrigger((prev) => prev + 1);
+        }
       } else {
         setAuthError(data.error || '인증 처리에 실패했습니다.');
       }
@@ -223,7 +231,7 @@ export default function App() {
       />
 
       {/* Primary layout contents container */}
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-7xl px-3.5 py-5 sm:px-6 sm:py-8 lg:px-8">
         
         <AnimatePresence mode="wait">
           {!user ? (
@@ -245,7 +253,7 @@ export default function App() {
                     <Lock className="h-6 w-6" />
                   </div>
                   <h2 className="mt-4 text-xl font-extrabold text-slate-900 tracking-tight">
-                    남양주시 스마트 시정 제안 로그인
+                    남양주시 시정 제안 관리 플랫폼
                   </h2>
                   <p className="mt-1.5 text-xs text-slate-400 font-semibold leading-relaxed">
                     작성자의 연합 이메일 계정 테이블과 제안 내역을 완벽히 분리 격리하여 작성 후에도 사생활 및 신원을 절대적으로 보호하는 훌륭한 시민 참여 플랫폼입니다.
@@ -258,22 +266,49 @@ export default function App() {
                   </div>
                 )}
 
+                {successMessage && (
+                  <div className="mt-5 rounded-xl bg-emerald-50 border border-emerald-100 p-3.5 text-xs text-emerald-800 font-bold leading-relaxed whitespace-pre-line">
+                    {successMessage}
+                  </div>
+                )}
+
                 {/* Form submit */}
                 <form onSubmit={handleAuthSubmit} className="mt-6 space-y-4">
                   {authMode === 'register' && (
-                    <div>
-                      <label htmlFor="reg-nickname" className="block text-xs font-bold text-slate-700">
-                        닉네임 (신용 필명)
-                      </label>
-                      <input
-                        id="reg-nickname"
-                        type="text"
-                        required
-                        value={nickname}
-                        onChange={(e) => setNickname(e.target.value)}
-                        placeholder="예시) 남양주다산러"
-                        className="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:outline-hidden"
-                      />
+                    <div className="space-y-4">
+                      <div>
+                        <label htmlFor="reg-nickname" className="block text-xs font-bold text-slate-700">
+                          닉네임 (신용 필명)
+                        </label>
+                        <input
+                          id="reg-nickname"
+                          type="text"
+                          required
+                          value={nickname}
+                          onChange={(e) => setNickname(e.target.value)}
+                          placeholder="예시) 남양주다산러"
+                          className="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:outline-hidden"
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="reg-passcode" className="block text-xs font-bold text-slate-700 flex items-center justify-between">
+                          <span>제안자 인증 승인 암호번호</span>
+                          <span className="text-[10px] text-blue-700 font-bold">필수 입력</span>
+                        </label>
+                        <input
+                          id="reg-passcode"
+                          type="text"
+                          required
+                          value={passcode}
+                          onChange={(e) => setPasscode(e.target.value)}
+                          placeholder="발급받은 암호번호 입력 (예시: 1331 또는 NYJ-2026)"
+                          className="mt-1.5 w-full rounded-xl border border-blue-100 bg-blue-50/20 px-4 py-2.5 text-xs font-mono font-bold text-blue-900 placeholder:text-blue-400/70 focus:border-blue-500 focus:bg-white focus:outline-hidden text-center tracking-widest"
+                        />
+                        <p className="mt-1 text-[9.5px] text-slate-400 font-semibold leading-normal">
+                          ※ 도배 방지 및 책임 인증을 위한 조치입니다. 사전에 배포된 암호번호를 입력해야 회원 가입이 접수됩니다. (테스트용: 1331 또는 NYJ-2026)
+                        </p>
+                      </div>
                     </div>
                   )}
 
@@ -322,6 +357,7 @@ export default function App() {
                     onClick={() => {
                       setAuthMode(authMode === 'login' ? 'register' : 'login');
                       setAuthError('');
+                      setSuccessMessage('');
                     }}
                     className="text-[11px] font-bold text-blue-700 hover:underline"
                   >
@@ -374,121 +410,163 @@ export default function App() {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
-              className="grid gap-8 md:grid-cols-4"
+              className="space-y-4 md:space-y-0"
             >
-              
-              {/* Sidebar: Navigation tabs & Policy Agendas */}
-              <div className="md:col-span-1 space-y-5">
-                
-                {/* Citizens personal tab toggler links */}
-                <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white p-2.5 shadow-xs">
-                  <span className="block px-3 py-1 text-[10px] font-bold text-slate-400">
-                    마이 포털 네비게이터
-                  </span>
-                  <nav className="mt-1.5 space-y-1">
+              {/* Mobile Horizontal Navigation Tabs (Visible only below md:) */}
+              <div className="md:hidden block">
+                <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white p-1.5 shadow-xs">
+                  <nav className="flex space-x-1">
                     <button
                       onClick={() => setActiveTab('intro')}
-                      className={`flex w-full items-center space-x-2.5 rounded-xl px-3 py-2 text-xs font-bold transition-all ${
+                      className={`flex-grow flex items-center justify-center space-x-1.5 rounded-xl py-2 px-1 text-[11px] font-bold transition-all ${
                         activeTab === 'intro'
-                          ? 'bg-blue-700 text-white'
-                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                          ? 'bg-blue-700 text-white shadow-xs'
+                          : 'text-slate-600 hover:bg-slate-50'
                       }`}
                     >
-                      <Compass className="h-4 w-4" />
-                      <span>플랫폼 소개 및 서약</span>
+                      <Compass className="h-3.8 w-3.8 shrink-0" />
+                      <span className="truncate">소개 & 서약</span>
                     </button>
                     <button
                       onClick={() => setActiveTab('new-proposal')}
-                      className={`flex w-full items-center space-x-2.5 rounded-xl px-3 py-2 text-xs font-bold transition-all ${
+                      className={`flex-grow flex items-center justify-center space-x-1.5 rounded-xl py-2 px-1 text-[11px] font-bold transition-all ${
                         activeTab === 'new-proposal'
-                          ? 'bg-blue-700 text-white'
-                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                          ? 'bg-blue-700 text-white shadow-xs'
+                          : 'text-slate-600 hover:bg-slate-50'
                       }`}
                     >
-                      <PenTool className="h-4 w-4" />
-                      <span>새로운 아이디어 작성</span>
+                      <PenTool className="h-3.8 w-3.8 shrink-0" />
+                      <span className="truncate">제안 작성</span>
                     </button>
                     <button
                       onClick={() => setActiveTab('my-proposals')}
-                      className={`flex w-full items-center space-x-2.5 rounded-xl px-3 py-2 text-xs font-bold transition-all ${
+                      className={`flex-grow flex items-center justify-center space-x-1.5 rounded-xl py-2 px-1 text-[11px] font-bold transition-all ${
                         activeTab === 'my-proposals'
-                          ? 'bg-blue-700 text-white'
-                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                          ? 'bg-blue-700 text-white shadow-xs'
+                          : 'text-slate-600 hover:bg-slate-50'
                       }`}
                     >
-                      <ClipboardList className="h-4 w-4" />
-                      <span>나의 제안 보관함 ({mappedIdeas.length})</span>
+                      <ClipboardList className="h-3.8 w-3.8 shrink-0" />
+                      <span className="truncate">나의 제안함 ({mappedIdeas.length})</span>
                     </button>
                   </nav>
                 </div>
-
-                {/* High Contrast Informational side block (10 core promises list for inspiration!) */}
-                <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-xs">
-                  <h4 className="text-xs font-extrabold text-slate-900">'남양주 혁신 10대 약속'</h4>
-                  <p className="mt-1 text-[10px] text-slate-400 font-bold leading-normal">
-                    * 시민 제안 작성 시 10대 공약을 적극 고려해 주시면 좋습니다.
-                  </p>
-                  
-                  <ul className="mt-3.5 space-y-2">
-                    <li className="flex items-center space-x-2 text-[11px]">
-                      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-md bg-blue-50 text-[9px] font-bold text-blue-700 border border-blue-100">01</span>
-                      <span className="font-bold text-slate-700">쾌속 교통망 확충</span>
-                    </li>
-                    <li className="flex items-center space-x-2 text-[11px]">
-                      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-md bg-emerald-50 text-[9px] font-bold text-emerald-700 border border-emerald-100">02</span>
-                      <span className="font-bold text-slate-700">건강·안전 시스템 구축</span>
-                    </li>
-                    <li className="flex items-center space-x-2 text-[11px]">
-                      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-md bg-amber-50 text-[9px] font-bold text-amber-700 border border-amber-100">03</span>
-                      <span className="font-bold text-slate-700">자족 경제도시 완성!</span>
-                    </li>
-                    <li className="flex items-center space-x-2 text-[11px]">
-                      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-md bg-indigo-50 text-[9px] font-bold text-indigo-700 border border-indigo-100">04</span>
-                      <span className="font-bold text-slate-700">평생교육 및 보육시스템</span>
-                    </li>
-                    <li className="flex items-center space-x-2 text-[11px]">
-                      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-md bg-pink-50 text-[9px] font-bold text-pink-700 border border-pink-100">05</span>
-                      <span className="font-bold text-slate-700">쾌적한 주거환경 조성</span>
-                    </li>
-                    <li className="flex items-center space-x-2 text-[11px]">
-                      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-md bg-teal-50 text-[9px] font-bold text-teal-700 border border-teal-100">06</span>
-                      <span className="font-bold text-slate-700">민생경제 및 소상공인지원</span>
-                    </li>
-                    <li className="flex items-center space-x-2 text-[11px]">
-                      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-md bg-violet-50 text-[9px] font-bold text-violet-700 border border-violet-100">07</span>
-                      <span className="font-bold text-slate-700">꼼꼼하고 촘촘한 맞춤복지</span>
-                    </li>
-                    <li className="flex items-center space-x-2 text-[11px]">
-                      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-md bg-rose-50 text-[9px] font-bold text-rose-700 border border-rose-100">08</span>
-                      <span className="font-bold text-slate-700">품격 예술·문화·관광도시</span>
-                    </li>
-                    <li className="flex items-center space-x-2 text-[11px]">
-                      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-md bg-cyan-50 text-[9px] font-bold text-cyan-700 border border-cyan-100">09</span>
-                      <span className="font-bold text-slate-700">생활체육 및 힐링공간조성</span>
-                    </li>
-                    <li className="flex items-center space-x-2 text-[11px]">
-                      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-md bg-slate-100 text-[9px] font-bold text-slate-700 border border-slate-200">10</span>
-                      <span className="font-bold text-slate-700">시민체감 행정도시</span>
-                    </li>
-                  </ul>
-                </div>
-
-                {/* System status widget */}
-                <div className="rounded-2xl bg-slate-50 border border-slate-100 p-3.5 text-xs text-slate-500 font-semibold space-y-1.5">
-                  <div className="flex items-center justify-between text-[10px]">
-                    <span>AI 공문요약 엔진</span>
-                    <span className="text-blue-700 font-bold">활성화</span>
-                  </div>
-                  <div className="flex items-center justify-between text-[10px]">
-                    <span>중복 제안 탐지망</span>
-                    <span className="text-emerald-650 font-bold">정상 가동</span>
-                  </div>
-                </div>
-
               </div>
 
-              {/* Central Tab Content panels */}
-              <div className="md:col-span-3">
+              <div className="grid gap-6 md:gap-8 md:grid-cols-4">
+                
+                {/* Sidebar: Navigation tabs & Policy Agendas */}
+                <div className="hidden md:block md:col-span-1 space-y-5">
+                  
+                  {/* Citizens personal tab toggler links */}
+                  <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white p-2.5 shadow-xs">
+                    <span className="block px-3 py-1 text-[10px] font-bold text-slate-400">
+                      마이 포털 네비게이터
+                    </span>
+                    <nav className="mt-1.5 space-y-1">
+                      <button
+                        onClick={() => setActiveTab('intro')}
+                        className={`flex w-full items-center space-x-2.5 rounded-xl px-3 py-2 text-xs font-bold transition-all ${
+                          activeTab === 'intro'
+                            ? 'bg-blue-700 text-white'
+                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                        }`}
+                      >
+                        <Compass className="h-4 w-4" />
+                        <span>플랫폼 소개 및 서약</span>
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('new-proposal')}
+                        className={`flex w-full items-center space-x-2.5 rounded-xl px-3 py-2 text-xs font-bold transition-all ${
+                          activeTab === 'new-proposal'
+                            ? 'bg-blue-700 text-white'
+                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                        }`}
+                      >
+                        <PenTool className="h-4 w-4" />
+                        <span>새로운 아이디어 작성</span>
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('my-proposals')}
+                        className={`flex w-full items-center space-x-2.5 rounded-xl px-3 py-2 text-xs font-bold transition-all ${
+                          activeTab === 'my-proposals'
+                            ? 'bg-blue-700 text-white'
+                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                        }`}
+                      >
+                        <ClipboardList className="h-4 w-4" />
+                        <span>나의 제안 보관함 ({mappedIdeas.length})</span>
+                      </button>
+                    </nav>
+                  </div>
+
+                  {/* High Contrast Informational side block (10 core promises list for inspiration!) */}
+                  <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-xs">
+                    <h4 className="text-xs font-extrabold text-slate-900">'남양주 혁신 10대 약속'</h4>
+                    <p className="mt-1 text-[10px] text-slate-400 font-bold leading-normal">
+                      * 시민 제안 작성 시 10대 공약을 적극 고려해 주시면 좋습니다.
+                    </p>
+                    
+                    <ul className="mt-3.5 space-y-2">
+                      <li className="flex items-center space-x-2 text-[11px]">
+                        <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-md bg-blue-50 text-[9px] font-bold text-blue-700 border border-blue-100">01</span>
+                        <span className="font-bold text-slate-700">쾌속 교통망 확충</span>
+                      </li>
+                      <li className="flex items-center space-x-2 text-[11px]">
+                        <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-md bg-emerald-50 text-[9px] font-bold text-emerald-700 border border-emerald-100">02</span>
+                        <span className="font-bold text-slate-700">건강·안전 시스템 구축</span>
+                      </li>
+                      <li className="flex items-center space-x-2 text-[11px]">
+                        <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-md bg-amber-50 text-[9px] font-bold text-amber-700 border border-amber-100">03</span>
+                        <span className="font-bold text-slate-700">자족 경제도시 완성!</span>
+                      </li>
+                      <li className="flex items-center space-x-2 text-[11px]">
+                        <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-md bg-indigo-50 text-[9px] font-bold text-indigo-700 border border-indigo-100">04</span>
+                        <span className="font-bold text-slate-700">평생교육 및 보육시스템</span>
+                      </li>
+                      <li className="flex items-center space-x-2 text-[11px]">
+                        <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-md bg-pink-50 text-[9px] font-bold text-pink-700 border border-pink-100">05</span>
+                        <span className="font-bold text-slate-700">쾌적한 주거환경 조성</span>
+                      </li>
+                      <li className="flex items-center space-x-2 text-[11px]">
+                        <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-md bg-teal-50 text-[9px] font-bold text-teal-700 border border-teal-100">06</span>
+                        <span className="font-bold text-slate-700">민생경제 및 소상공인지원</span>
+                      </li>
+                      <li className="flex items-center space-x-2 text-[11px]">
+                        <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-md bg-violet-50 text-[9px] font-bold text-violet-700 border border-violet-100">07</span>
+                        <span className="font-bold text-slate-700">꼼꼼하고 촘촘한 맞춤복지</span>
+                      </li>
+                      <li className="flex items-center space-x-2 text-[11px]">
+                        <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-md bg-rose-50 text-[9px] font-bold text-rose-700 border border-rose-100">08</span>
+                        <span className="font-bold text-slate-700">품격 예술·문화·관광도시</span>
+                      </li>
+                      <li className="flex items-center space-x-2 text-[11px]">
+                        <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-md bg-cyan-50 text-[9px] font-bold text-cyan-700 border border-cyan-100">09</span>
+                        <span className="font-bold text-slate-700">생활체육 및 힐링공간조성</span>
+                      </li>
+                      <li className="flex items-center space-x-2 text-[11px]">
+                        <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-md bg-slate-100 text-[9px] font-bold text-slate-700 border border-slate-200">10</span>
+                        <span className="font-bold text-slate-700">시민체감 행정도시</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  {/* System status widget */}
+                  <div className="rounded-2xl bg-slate-50 border border-slate-100 p-3.5 text-xs text-slate-500 font-semibold space-y-1.5">
+                    <div className="flex items-center justify-between text-[10px]">
+                      <span>AI 공문요약 엔진</span>
+                      <span className="text-blue-700 font-bold">활성화</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[10px]">
+                      <span>중복 제안 탐지망</span>
+                      <span className="text-emerald-650 font-bold">정상 가동</span>
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* Central Tab Content panels */}
+                <div className="col-span-1 md:col-span-3">
                 <AnimatePresence mode="wait">
                   
                   {/* TAB 1: Stunning Professional Intro Panel */}
@@ -595,8 +673,9 @@ export default function App() {
 
                 </AnimatePresence>
               </div>
+            </div>
 
-            </motion.div>
+          </motion.div>
           )}
         </AnimatePresence>
 

@@ -40,9 +40,16 @@ export default function Navbar({
             </span>
           </div>
           <div>
-            <h1 className="text-base font-bold tracking-tight text-slate-900 sm:text-lg">
-              남양주시 스마트 시정 제안
-            </h1>
+            <div className="flex items-center space-x-2">
+              <h1 className="text-base font-bold tracking-tight text-slate-900 sm:text-lg">
+                남양주시 스마트 시정 제안
+              </h1>
+              {user?.is_supabase && (
+                <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-bold text-emerald-700 ring-1 ring-inset ring-emerald-600/10">
+                  Supabase Live
+                </span>
+              )}
+            </div>
             <p className="hidden text-[10px] font-medium text-blue-700 sm:block">
               개인정보 분리 설계형 완벽 익명 보장 플랫폼
             </p>

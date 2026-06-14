@@ -160,7 +160,7 @@ export default function NewProposal({ onSubmitSuccess }: NewProposalProps) {
       {/* AI submission completion pop-up modal panel */}
       {aiResult && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs animate-fade-in">
-          <div className="w-full max-w-2xl rounded-3xl border border-slate-100 bg-white p-6 shadow-2xl sm:p-8">
+          <div className="w-full max-w-2xl rounded-3xl border border-slate-100 bg-white p-4 sm:p-6 md:p-8 shadow-2xl max-h-[92vh] overflow-y-auto">
             <div className="flex flex-col items-center text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
                 <CheckCircle2 className="h-8 w-8" />
@@ -258,7 +258,7 @@ export default function NewProposal({ onSubmitSuccess }: NewProposalProps) {
                   type="button"
                   key={cat}
                   onClick={() => setCategory(cat)}
-                  className={`rounded-xl py-2 px-1 text-center text-xs font-bold transition ${
+                  className={`rounded-xl py-2 px-0.5 text-center text-[11px] sm:text-xs font-bold transition ${
                     category === cat
                       ? 'bg-blue-700 text-white shadow-sm shadow-blue-500/10'
                       : 'bg-slate-50 text-slate-600 border border-slate-100 hover:bg-slate-100'

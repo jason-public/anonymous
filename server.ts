@@ -5,6 +5,26 @@ import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
+import {
+  findUserById,
+  findUserByEmail,
+  createUser as dbCreateUser,
+  findIdeasByUserId,
+  findAllIdeas,
+  findIdeaById,
+  deleteIdea as dbDeleteIdea,
+  createIdea as dbCreateIdea,
+  updateIdeaStatus as dbUpdateIdeaStatus,
+  findMappingByIdeaId,
+  findNotificationsByUserId,
+  markNotificationsAsRead,
+  createNotification as dbCreateNotification,
+  isSupabaseActive,
+  signUpWithAuth,
+  signInWithAuth,
+  findAllUsers,
+  addCommentToIdea as dbAddCommentToIdea
+} from "./src/lib/supabaseService.ts";
 
 // Load environment variables
 dotenv.config();
@@ -25,8 +45,6 @@ if (!fs.existsSync(DATA_DIR)) {
 if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
-
-const DB_PATH = path.join(DATA_DIR, "db.json");
 
 // Middleware
 app.use(express.json({ limit: "50mb" }));
@@ -54,182 +72,97 @@ function getGeminiClient(): GoogleGenAI | null {
   return aiClient;
 }
 
-// Low-Db-like local database state
-interface DbSchema {
-  users: any[];
-  ideas: any[];
-  user_ideas: any[];
-  notifications: any[];
-}
-
-const defaultDb: DbSchema = {
-  users: [
-    { id: "user_1", email: "citizen@nyj.go.kr", nickname: "남양주시민_홍길동", role: "User", password: "user123" },
-    { id: "user_2", email: "admin@nyj.go.kr", nickname: "시정기획관_황희", role: "Admin", password: "admin123" }
-  ],
-  ideas: [
-    {
-      id: "idea-seed-1",
-      title: "다산신도시 스마트 버스정류장 냉난방 및 공기청정 쉘터 확대 설치",
-      content: "다산동 출퇴근 차량 정체 구역 및 기상 이변(한파, 폭염) 시 취약계층과 시민들이 대기할 수 있도록 냉난방 온열의자와 미세먼지 저감장치가 결합된 밀폐형 스마트 정류장 쉘터를 주요 간선 버스정류장에 확대 개편할 것을 제안합니다.",
-      category: "교통",
-      status: "채택",
-      summary: "1. [현황 및 필요성] 폭염 및 한파 시 실외 버스정류장에서 대기하는 시민들의 건강 위협 및 기후변화 대응 필요성 증대.\n2. [제안 내용] 다산동 주요 간선 정류장에 열선 의자, 에어컨, 공기청정 및 실시간 버스 정보가 통합된 밀폐형 쉘터 시범 설치.\n3. [기대 효과] 대중교통 이용 편의성 대폭 증대 및 노약자·취약 계층의 기후재난 피해 최소화망 제공.",
-      similarity_flag: false,
-      similarity_score: 0,
-      created_at: "2026-06-10T10:30:00.000Z",
-      attachments: [],
-      admin_notes: "2026년 하반기 시정 추경 예산 편성 검토 대상으로 분류하고, 다산동 행정복지센터 인근 교통 밀집 지구에 우선 설치하기로 함."
-    },
-    {
-      id: "idea-seed-2",
-      title: "독거 어르신 안부 확인을 위한 AI 인공지능 말벗 돌봄 인프라 도입",
-      content: "코로나 이후 심화되는 고령층 고독사 문제를 방지하고자, 사회복지사의 주기적인 대면 케어가 어려운 시간 대에 인공지능 스피커 또는 스마트 실버 전화를 지원하여 맞춤형 정서 대화와 약 복용 안내 시스템을 구축해야 합니다.",
-      category: "복지",
-      status: "검토중",
-      summary: "1. [현황 및 필요성] 노인 인구 비율 증가에 따른 고독사 위험성 및 비대면 안부 확인망 필요성 급증.\n2. [제안 내용] 고위험 독거노인 세대에 인공지능 대화형 단말기 무상 보급 및 이상 패턴 감지 시 긴급 출동 연동.\n3. [기대 효과] 사회안전망 구축을 통한 정서적 고립감 해소 및 사회 복지 예산·인력 투입 대비 최대 효율 달성.",
-      similarity_flag: false,
-      similarity_score: 0,
-      created_at: "2026-06-11T14:20:00.000Z",
-      attachments: [],
-      admin_notes: "보건소 및 복지정책과와 협업하여 시범 운영 세대 선정을 준비 중입니다."
-    },
-    {
-      id: "idea-seed-3",
-      title: "왕숙천·한강 생태문화공원 일대 친환경 자전거 전용 쓰레기 수거통 설치 요구",
-      content: "최근 자전거도로 및 산책로 주변 일대 쓰레기 투기가 잦으나, 도보용 쓰레기통만 있어 지나가는 라이더들이 쓰레기를 손쉽게 안전하게 버릴 수 있는 높이가 있는 골그물망 구조 of 자전거 전용 쓰레기 수거함을 시범 운용했으면 합니다.",
-      category: "환경",
-      status: "접수",
-      summary: "1. [현황 및 필요성] 왕숙천·한강 라이딩 인구 증가에 따른 산책로 주변 무단 쓰레기 투기 예방.\n2. [제안 내용] 자전거 주행선 옆 높이에 바구니 모양의 투척식 스포츠 휴지통 설치.\n3. [기대 효과] 라이더들의 불법 투기를 재미 요소로 자발적 차단하고 쾌적한 하천 공원 미관 보존.",
-      similarity_flag: false,
-      similarity_score: 0,
-      created_at: "2026-06-12T09:15:00.000Z",
-      attachments: [],
-      admin_notes: ""
-    },
-    {
-      id: "idea-seed-4",
-      title: "전통시장 바가지 요금 근절을 위한 디지털 가격 정보 표시판 현대화 사업",
-      content: "지방 전통시장 활성화를 위해 고질적인 문제인 바가지 요금과 부정확한 기재를 방지하기 위해 스마트 상점화 일환으로 품목 기준 디지털 QR 전자 상장판 보급 사업을 확대 지원하여 신도시 주민과 관광객들이 안심하고 결제할 수 있는 정찰제를 활성화해주세요.",
-      category: "경제",
-      status: "접수",
-      summary: "1. [현황 및 필요성] 전통시장 상거래 신뢰 하락 및 비대면 가격 안내 부재로 소비자와의 갈등 발생.\n2. [제안 내용] 시장 메인 입구 및 점포 규격별 디지털 정찰제 LCD 패널 설치 및 모바일 연동 앱 고도화.\n3. [기대 효과] 관광객 접근 장벽 제거 및 투명한 가격 정책 도입을 통해 전통시장 상권 경제 재도약 유도.",
-      similarity_flag: false,
-      similarity_score: 0,
-      created_at: "2026-06-13T11:00:00.000Z",
-      attachments: [],
-      admin_notes: ""
-    }
-  ],
-  user_ideas: [
-    { user_id: "user_1", idea_id: "idea-seed-1" },
-    { user_id: "user_1", idea_id: "idea-seed-3" }
-  ],
-  notifications: [
-    {
-      id: "notif-1",
-      user_id: "user_1",
-      type: "STATUS_CHANGE",
-      message: "제안하신 [다산신도시 스마트 버스정류장 냉난방...] 아이디어가 '채택'되었습니다. 시정 발전에 기여해 주셔서 대단히 감사합니다!",
-      is_read: false,
-      created_at: "2026-06-12T16:00:00.000Z"
-    }
-  ]
-};
-
-// Database helper operations
-function readDb(): DbSchema {
-  try {
-    if (!fs.existsSync(DB_PATH)) {
-      writeDb(defaultDb);
-      return defaultDb;
-    }
-    const raw = fs.readFileSync(DB_PATH, "utf-8");
-    return JSON.parse(raw);
-  } catch (error) {
-    console.error("Error reading database file, returning default database:", error);
-    return defaultDb;
-  }
-}
-
-function writeDb(data: DbSchema) {
-  try {
-    fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), "utf-8");
-  } catch (error) {
-    console.error("Error writing database file:", error);
-  }
-}
-
 // Helper to simulation token/userID lookup (Simple static auth for demo/applet robustness)
 let activeSessionUserId: string | null = "user_1"; // Default to logged-in user 1 for easy instant demo flow
 
 // --- API ROUTES ---
 
 // Auth Endpoints
-app.get("/api/auth/me", (req, res) => {
-  const db = readDb();
-  const user = db.users.find((u) => u.id === activeSessionUserId);
-  if (!user) {
+app.get("/api/auth/me", async (req, res) => {
+  if (!activeSessionUserId) {
     return res.json({ user: null });
   }
-  return res.json({
-    user: {
-      id: user.id,
-      email: user.email,
-      nickname: user.nickname,
-      role: user.role,
-    },
-  });
+  try {
+    const user = await findUserById(activeSessionUserId);
+    if (!user) {
+      return res.json({ user: null });
+    }
+    return res.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        nickname: user.nickname,
+        role: user.role,
+        is_supabase: isSupabaseActive()
+      },
+    });
+  } catch (err: any) {
+    return res.json({ user: null });
+  }
 });
 
-app.post("/api/auth/login", (req, res) => {
+app.post("/api/auth/login", async (req, res) => {
   const { email, password } = req.body;
-  const db = readDb();
-  const user = db.users.find((u) => u.email === email && u.password === password);
-  
-  if (!user) {
-    return res.status(401).json({ error: "이메일 또는 비밀번호가 불일치합니다." });
+  try {
+    const authResult = await signInWithAuth(email, password);
+    
+    if (!authResult.user) {
+      return res.status(401).json({ error: "이메일 또는 비밀번호가 일치하지 않습니다." });
+    }
+    
+    activeSessionUserId = authResult.user.id;
+    return res.json({
+      user: {
+        id: authResult.user.id,
+        email: authResult.user.email,
+        nickname: authResult.user.nickname,
+        role: authResult.user.role,
+        is_supabase: isSupabaseActive()
+      },
+    });
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
   }
-  
-  activeSessionUserId = user.id;
-  return res.json({
-    user: {
-      id: user.id,
-      email: user.email,
-      nickname: user.nickname,
-      role: user.role,
-    },
-  });
 });
 
-app.post("/api/auth/register", (req, res) => {
-  const { email, password, nickname, role } = req.body;
-  const db = readDb();
-  
-  if (db.users.some((u) => u.email === email)) {
-    return res.status(400).json({ error: "이미 가입한 이메일입니다." });
+app.post("/api/auth/register", async (req, res) => {
+  const { email, password, nickname, role, passcode } = req.body;
+  try {
+    const authResult = await signUpWithAuth(
+      email,
+      password,
+      nickname,
+      passcode,
+      role === "Admin" ? "Admin" : "User"
+    );
+
+    // If email confirmation is enabled, user session won't be active immediately
+    if (authResult.emailConfirmationRequired) {
+      return res.json({
+        success: true,
+        user: null,
+        emailConfirmationRequired: true,
+        message: "원격 Supabase 이메일 가입 신청서가 수용되었습니다! 가입하신 이메일의 메일함으로 가칭 인증 링크를 발송했으니, 해당 확인 버튼을 누르신 후에 로그인 하실 수 있습니다."
+      });
+    }
+
+    if (authResult.user) {
+      activeSessionUserId = authResult.user.id;
+    }
+
+    return res.json({
+      user: authResult.user ? {
+        id: authResult.user.id,
+        email: authResult.user.email,
+        nickname: authResult.user.nickname,
+        role: authResult.user.role,
+        is_supabase: isSupabaseActive()
+      } : null,
+      emailConfirmationRequired: false
+    });
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
   }
-
-  const newUser = {
-    id: `user_${Date.now()}`,
-    email,
-    password,
-    nickname: nickname || email.split("@")[0],
-    role: role || "User",
-  };
-
-  db.users.push(newUser);
-  writeDb(db);
-
-  activeSessionUserId = newUser.id;
-  return res.json({
-    user: {
-      id: newUser.id,
-      email: newUser.email,
-      nickname: newUser.nickname,
-      role: newUser.role,
-    },
-  });
 });
 
 app.post("/api/auth/logout", (req, res) => {
@@ -238,22 +171,48 @@ app.post("/api/auth/logout", (req, res) => {
 });
 
 // Quick demo login toggle endpoint
-app.post("/api/auth/switch", (req, res) => {
+app.post("/api/auth/switch", async (req, res) => {
   const { role } = req.body;
-  const db = readDb();
-  const user = db.users.find((u) => u.role === role);
-  if (user) {
-    activeSessionUserId = user.id;
-    return res.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        nickname: user.nickname,
-        role: user.role,
-      },
-    });
+  try {
+    // Try primary seed records first
+    const targetId = role === "Admin" ? "user_2" : "user_1";
+    let user = await findUserById(targetId);
+    
+    // Fallback search if first search yields empty row
+    if (!user) {
+      const allIdeas = await findAllIdeas(); // triggering schema fetch or load local DB
+      // We can scan some pre-populated user from local json directly
+      const path = await import("path");
+      const fs = await import("fs");
+      const DB_PATH = path.join(process.cwd(), "data", "db.json");
+      if (fs.existsSync(DB_PATH)) {
+        try {
+          const raw = fs.readFileSync(DB_PATH, "utf-8");
+          const localData = JSON.parse(raw);
+          const localUser = localData.users?.find((u: any) => u.role === role);
+          if (localUser) {
+            user = localUser;
+          }
+        } catch (_) {}
+      }
+    }
+
+    if (user && user.role === role) {
+      activeSessionUserId = user.id;
+      return res.json({
+        user: {
+          id: user.id,
+          email: user.email,
+          nickname: user.nickname,
+          role: user.role,
+          is_supabase: isSupabaseActive()
+        },
+      });
+    }
+    return res.status(404).json({ error: "User role profile not found" });
+  } catch (err: any) {
+    return res.status(500).json({ error: "계정 스위치 처리 오류: " + err.message });
   }
-  return res.status(404).json({ error: "User role profile not found" });
 });
 
 // Create File Attachment Upload route
@@ -284,45 +243,85 @@ app.post("/api/upload", (req, res) => {
 });
 
 // User views their own mapped ideas (Anonymous records linked only in user_ideas mapping)
-app.get("/api/my-ideas", (req, res) => {
+app.get("/api/my-ideas", async (req, res) => {
   if (!activeSessionUserId) {
     return res.status(401).json({ error: "로그인이 필요합니다." });
   }
-  const db = readDb();
-  
-  // Find which idea IDs belong to this user
-  const ideaIds = db.user_ideas
-    .filter((mapping) => mapping.user_id === activeSessionUserId)
-    .map((mapping) => mapping.idea_id);
+  try {
+    const myIdeasList = await findIdeasByUserId(activeSessionUserId);
+    return res.json({ ideas: myIdeasList });
+  } catch (err: any) {
+    return res.status(500).json({ error: "제안 내역 조회 실패: " + err.message });
+  }
+});
+
+// Fetch single idea details in real-time
+app.get("/api/ideas/:id", async (req, res) => {
+  if (!activeSessionUserId) {
+    return res.status(401).json({ error: "로그인이 필요합니다." });
+  }
+  try {
+    const { id } = req.params;
+    const idea = await findIdeaById(id);
+    if (!idea) {
+      return res.status(404).json({ error: "해당 제안을 찾을 수 없습니다." });
+    }
+    return res.json({ idea });
+  } catch (err: any) {
+    return res.status(500).json({ error: "제안 상세 조회 실패: " + err.message });
+  }
+});
+
+// Delete single idea permanently
+app.delete("/api/ideas/:id", async (req, res) => {
+  if (!activeSessionUserId) {
+    return res.status(401).json({ error: "로그인이 필요합니다." });
+  }
+  try {
+    const { id } = req.params;
     
-  // Filter the actual ideas matching those IDs
-  const myIdeasList = db.ideas.filter((idea) => ideaIds.includes(idea.id));
-  
-  return res.json({ ideas: myIdeasList });
+    // Verify ownership or check if User is Admin
+    const mapping = await findMappingByIdeaId(id);
+    if (mapping && mapping.user_id !== activeSessionUserId) {
+      const user = await findUserById(activeSessionUserId);
+      if (!user || user.role !== "Admin") {
+        return res.status(403).json({ error: "본인이 작성한 제안만 삭제할 수 있습니다." });
+      }
+    }
+
+    const success = await dbDeleteIdea(id);
+    if (!success) {
+      return res.status(500).json({ error: "제안 삭제 처리에 실패했습니다." });
+    }
+    return res.json({ success: true, message: "제안이 성공적으로 삭제되었습니다." });
+  } catch (err: any) {
+    return res.status(500).json({ error: "제안 삭제 실패: " + err.message });
+  }
 });
 
 // Get User Notifications
-app.get("/api/notifications", (req, res) => {
+app.get("/api/notifications", async (req, res) => {
   if (!activeSessionUserId) {
     return res.json({ notifications: [] });
   }
-  const db = readDb();
-  const list = db.notifications.filter((n) => n.user_id === activeSessionUserId);
-  return res.json({ notifications: list });
+  try {
+    const list = await findNotificationsByUserId(activeSessionUserId);
+    return res.json({ notifications: list });
+  } catch (err: any) {
+    return res.json({ notifications: [] });
+  }
 });
 
-app.post("/api/notifications/read", (req, res) => {
+app.post("/api/notifications/read", async (req, res) => {
   if (!activeSessionUserId) {
     return res.json({ success: false });
   }
-  const db = readDb();
-  db.notifications.forEach((n) => {
-    if (n.user_id === activeSessionUserId) {
-      n.is_read = true;
-    }
-  });
-  writeDb(db);
-  return res.json({ success: true });
+  try {
+    await markNotificationsAsRead(activeSessionUserId);
+    return res.json({ success: true });
+  } catch (err: any) {
+    return res.json({ success: false });
+  }
 });
 
 // POST /api/ideas: Core Anonymity Pipeline & AI Summarizer / Duplicate Detection
@@ -331,7 +330,6 @@ app.post("/api/ideas", async (req, res) => {
     return res.status(401).json({ error: "로그인된 세션 정보가 없습니다. 로그인 페이지로 이동합니다." });
   }
   const userId = activeSessionUserId;
-  const db = readDb();
 
   const { title, content, category, attachments } = req.body;
   if (!title || !content) {
@@ -346,10 +344,9 @@ app.post("/api/ideas", async (req, res) => {
     let similarityScore = 0;
     let similarToTitle = "";
 
-    // 1) RUN INTUITIVE SEMANTIC SIMILARITY CHECK locally first
-    // For extreme performance and offline-resiliency in local mode
-    // We check substring inclusion or word intersections
-    const existingTitles = db.ideas.map((id) => id.title);
+    // 1) RUN INTUITIVE SEMANTIC SIMILARITY CHECK locally/remotely first
+    const allIdeasRef = await findAllIdeas();
+    const existingTitles = allIdeasRef.map((id) => id.title);
     for (const originalTitle of existingTitles) {
       const wordsContent = originalTitle.split(/\s+/).filter(w => w.length > 1);
       let matchCount = 0;
@@ -420,12 +417,10 @@ app.post("/api/ideas", async (req, res) => {
         console.log("Successfully retrieved and parsed AI Summary:", finalCategory);
       } catch (gem_err: any) {
         console.error("Error executing dynamic Gemini call, falling back to heuristic mock:", gem_err.message);
-        // Fail-safe heuristic fallback
         aiSummary = `1. [현황 및 필요성] 제안자 제기 문제: '${title.substring(0, 30)}'...에 대한 사회적 해결 요구 증대.\n2. [제안 내용] 대안 제시를 통한 시민 자가 시정 참여 및 자원 연동 확대.\n3. [기대 효과] 적극 시정 구현 및 참여형 지자체 만족도 증진.`;
         aiFeasibility = "전체적인 추진 구조가 합리적이며 지자체 관련 조례 개정을 통해 신속히 행정 지원이 도입될 타당성이 큽니다.";
       }
     } else {
-      // Fallback local mode summary
       aiSummary = `1. [현황 및 필요성] 시정 정책 인프라 미비로 인한 개선요청 확대 건.\n2. [제안 내용] 시민의 아이디어 '${title}' 바탕의 규제 개혁 및 시책 신규 융합 방안 제기.\n3. [기대 효과] 행정 소통 효율화 및 지역 거점 기반 친화성 향상.`;
       aiFeasibility = "지역 예산 수립 타당성을 기초로 검토가 필요하며 시각적 수혜 인구 가시성이 높아 적극 추진에 긍정적입니다.";
     }
@@ -437,28 +432,30 @@ app.post("/api/ideas", async (req, res) => {
       title,
       content,
       category: finalCategory,
-      status: "접수",
+      status: "접수" as any,
       summary: aiSummary,
       similarity_flag: isSimilar,
       similarity_score: similarityScore,
       similar_to_title: similarToTitle || undefined,
       created_at: new Date().toISOString(),
       attachments: attachments || [],
-      admin_notes: aiFeasibility ? `[AI 기술 검토 제언]:\n${aiFeasibility}` : ""
+      admin_notes: aiFeasibility ? `[AI 기술 검토 제언]:\n${aiFeasibility}` : "",
+      history: [
+        {
+          id: `hist-${Date.now()}`,
+          status: "접수" as any,
+          admin_notes: aiFeasibility ? `[AI 기술 검토 제언]:\n${aiFeasibility}` : "제안이 성공적으로 등록되었습니다. 담당 부서에서 검토를 준비하고 있습니다.",
+          updated_at: new Date().toISOString(),
+          updated_by_nickname: "시스템 AI 분석기"
+        }
+      ]
     };
 
     // DB TRANSACTION (DURABLE & ANONYMOUS MECHANISM)
-    // 1) Write to completely global 'ideas' table (lacks any user reference code whatsoever!)
-    db.ideas.push(newIdea);
+    await dbCreateIdea(newIdea, userId);
 
-    // 2) Write mapping only to 'user_ideas' private dictionary (strictly user personal logs, admin has restricted read access)
-    db.user_ideas.push({
-      user_id: userId,
-      idea_id: newIdeaId
-    });
-
-    // 3) Create notification to inform citizen about successful dispatch
-    db.notifications.push({
+    // Create notification to inform citizen about successful dispatch
+    await dbCreateNotification({
       id: `notif-${Date.now()}`,
       user_id: userId,
       type: "SUBMIT_SUCCESS",
@@ -466,8 +463,6 @@ app.post("/api/ideas", async (req, res) => {
       is_read: false,
       created_at: new Date().toISOString()
     });
-
-    writeDb(db);
 
     return res.status(201).json({
       success: true,
@@ -483,95 +478,158 @@ app.post("/api/ideas", async (req, res) => {
 });
 
 // Admin Dashboard stats - (Completely separate anonymized metrics calculation)
-app.get("/api/admin/stats", (req, res) => {
-  // Security review: verify session is admin
-  const db = readDb();
-  const user = db.users.find((u) => u.id === activeSessionUserId);
-  if (!user || user.role !== "Admin") {
-    return res.status(403).json({ error: "시정 담당공무원(Admin) 권한이 필요한 대시보드 구역입니다." });
+app.get("/api/admin/stats", async (req, res) => {
+  if (!activeSessionUserId) {
+    return res.status(401).json({ error: "로그인이 필요합니다." });
   }
+  try {
+    const user = await findUserById(activeSessionUserId);
+    if (!user || user.role !== "Admin") {
+      return res.status(403).json({ error: "시정 담당공무원(Admin) 권한이 필요한 대시보드 구역입니다." });
+    }
 
-  // Calculate snapshot metrics
-  const totalCount = db.ideas.length;
-  const statusCounts = db.ideas.reduce((acc, idea) => {
-    acc[idea.status] = (acc[idea.status] || 0) + 1;
-    return acc;
-  }, { "접수": 0, "검토중": 0, "채택": 0, "보류": 0, "반려": 0 });
+    const allIdeas = await findAllIdeas();
+    const totalCount = allIdeas.length;
 
-  const categoryCounts = db.ideas.reduce((acc, idea) => {
-    acc[idea.category] = (acc[idea.category] || 0) + 1;
-    return acc;
-  }, { "교통": 0, "복지": 0, "환경": 0, "교육": 0, "문화": 0, "안전": 0, "경제": 0, "기타": 0 });
+    const statusCounts = allIdeas.reduce((acc, idea) => {
+      acc[idea.status] = (acc[idea.status] || 0) + 1;
+      return acc;
+    }, { "접수": 0, "검토중": 0, "채택": 0, "보류": 0, "반려": 0 } as Record<string, number>);
 
-  const categoryRatios = Object.keys(categoryCounts).map((cat) => {
-    const score = categoryCounts[cat];
-    return {
-      category: cat,
-      count: score,
-      percentage: totalCount > 0 ? parseFloat(((score / totalCount) * 100).toFixed(1)) : 0
-    };
-  });
+    const categoryCounts = allIdeas.reduce((acc, idea) => {
+      acc[idea.category] = (acc[idea.category] || 0) + 1;
+      return acc;
+    }, { "교통": 0, "복지": 0, "환경": 0, "교육": 0, "문화": 0, "안전": 0, "경제": 0, "기타": 0 } as Record<string, number>);
 
-  const duplicateFlaggedCount = db.ideas.filter(idea => idea.similarity_flag).length;
+    const categoryRatios = Object.keys(categoryCounts).map((cat) => {
+      const score = categoryCounts[cat];
+      return {
+        category: cat,
+        count: score,
+        percentage: totalCount > 0 ? parseFloat(((score / totalCount) * 100).toFixed(1)) : 0
+      };
+    });
 
-  return res.json({
-    total_count: totalCount,
-    status_counts: statusCounts,
-    category_ratios: categoryRatios,
-    duplicate_flagged_count: duplicateFlaggedCount
-  });
+    const duplicateFlaggedCount = allIdeas.filter(idea => idea.similarity_flag).length;
+
+    return res.json({
+      total_count: totalCount,
+      status_counts: statusCounts,
+      category_ratios: categoryRatios,
+      duplicate_flagged_count: duplicateFlaggedCount
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: "통계 데이터 집계 오류: " + err.message });
+  }
+});
+
+// Admin Fetch users list - Fetches the live profiles from auth/public database safely for verified admins
+app.get("/api/admin/users", async (req, res) => {
+  if (!activeSessionUserId) {
+    return res.status(401).json({ error: "로그인이 필요합니다." });
+  }
+  try {
+    const user = await findUserById(activeSessionUserId);
+    if (!user || user.role !== "Admin") {
+      return res.status(403).json({ error: "시정 담당공무원(Admin) 권한이 필요한 대시보드 구역입니다." });
+    }
+    const users = await findAllUsers();
+    return res.json({ users });
+  } catch (err: any) {
+    return res.status(500).json({ error: "사용자 목록 로드 실패: " + err.message });
+  }
 });
 
 // Admin Fetch list - Completely anonymous! Only returns ideas, without join user profile details!
-app.get("/api/admin/ideas", (req, res) => {
-  const db = readDb();
-  const user = db.users.find((u) => u.id === activeSessionUserId);
-  if (!user || user.role !== "Admin") {
-    return res.status(403).json({ error: "권한이 없습니다." });
+app.get("/api/admin/ideas", async (req, res) => {
+  if (!activeSessionUserId) {
+    return res.status(401).json({ error: "로그인이 필요합니다." });
   }
-  // Secure compliance: Never attach personal id information when serving to admin
-  return res.json({ ideas: db.ideas });
+  try {
+    const user = await findUserById(activeSessionUserId);
+    if (!user || user.role !== "Admin") {
+      return res.status(403).json({ error: "권한이 없습니다." });
+    }
+    const allIdeas = await findAllIdeas();
+    return res.json({ ideas: allIdeas });
+  } catch (err: any) {
+    return res.status(500).json({ error: "민원 목록 로드 실패: " + err.message });
+  }
 });
 
 // Admin update status of an ideas (post state change)
-app.patch("/api/admin/ideas/:id", (req, res) => {
+app.patch("/api/admin/ideas/:id", async (req, res) => {
   const { id } = req.params;
   const { status, admin_notes } = req.body;
-  const db = readDb();
 
-  const user = db.users.find((u) => u.id === activeSessionUserId);
-  if (!user || user.role !== "Admin") {
-    return res.status(403).json({ error: "권한이 없습니다." });
+  if (!activeSessionUserId) {
+    return res.status(401).json({ error: "로그인이 필요합니다." });
   }
+  try {
+    const user = await findUserById(activeSessionUserId);
+    if (!user || user.role !== "Admin") {
+      return res.status(403).json({ error: "권한이 없습니다." });
+    }
 
-  const idea = db.ideas.find((i) => i.id === id);
-  if (!idea) {
-    return res.status(404).json({ error: "아이디어를 찾을 수 없습니다." });
+    const allIdeas = await findAllIdeas();
+    const existingIdea = allIdeas.find((i) => i.id === id);
+    if (!existingIdea) {
+      return res.status(404).json({ error: "아이디어를 찾을 수 없습니다." });
+    }
+
+    const oldStatus = existingIdea.status;
+    const updatedBy = user ? user.nickname : "시정 담당공무원";
+    const updatedIdea = await dbUpdateIdeaStatus(id, status, admin_notes, updatedBy);
+
+    // Trace back which user requested this privately to issue a notification
+    const mapping = await findMappingByIdeaId(id);
+    if (mapping) {
+      await dbCreateNotification({
+        id: `notif-${Date.now()}`,
+        user_id: mapping.user_id,
+        type: "STATUS_CHANGE",
+        message: `제안하신 [${existingIdea.title.substring(0, 20)}...]의 심사 상태가 [${oldStatus}] ➜ [${status || oldStatus}](으)로 업데이트 되었습니다. 신속하고 성실하게 검토 결과를 반영하겠습니다.`,
+        is_read: false,
+        created_at: new Date().toISOString()
+      });
+    }
+
+    return res.json({ success: true, idea: updatedIdea });
+  } catch (err: any) {
+    return res.status(500).json({ error: "상태 변경 저장 실패: " + err.message });
   }
-
-  const oldStatus = idea.status;
-  idea.status = status || idea.status;
-  if (admin_notes !== undefined) {
-    idea.admin_notes = admin_notes;
-  }
-
-  // Trace back which user requested this privately to issue a notification
-  const mapping = db.user_ideas.find((m) => m.idea_id === id);
-  if (mapping) {
-    db.notifications.push({
-      id: `notif-${Date.now()}`,
-      user_id: mapping.user_id,
-      type: "STATUS_CHANGE",
-      message: `제안하신 [${idea.title.substring(0, 20)}...]의 심사 상태가 [${oldStatus}] ➜ [${idea.status}](으)로 업데이트 되었습니다. 신속하고 성실하게 검토 결과를 반영하겠습니다.`,
-      is_read: false,
-      created_at: new Date().toISOString()
-    });
-  }
-
-  writeDb(db);
-  return res.json({ success: true, idea });
 });
 
+// 제안자(시민)가 상세 보기 모달에서 담당자에게 추가 피드백/의견 소통 메시지를 던질 수 있는 API
+app.post("/api/ideas/:id/comment", async (req, res) => {
+  const { id } = req.params;
+  const { message } = req.body;
+
+  if (!activeSessionUserId) {
+    return res.status(401).json({ error: "로그인이 필요합니다." });
+  }
+
+  if (!message || message.trim() === "") {
+    return res.status(400).json({ error: "메시지 내용을 입력해 주세요." });
+  }
+
+  try {
+    // 1. 보안/매핑 점검: 현재 접속 유저가 이 아이디어의 원작성자가 맞는지 검증
+    const mapping = await findMappingByIdeaId(id);
+    if (!mapping || mapping.user_id !== activeSessionUserId) {
+      return res.status(403).json({ error: "본인의 제안에만 추가 소통 의견을 남길 수 있습니다." });
+    }
+
+    const user = await findUserById(activeSessionUserId);
+    const nickname = user ? `${user.nickname} (제안자)` : "시민 제안자";
+
+    const updatedIdea = await dbAddCommentToIdea(id, message, nickname);
+
+    return res.json({ success: true, idea: updatedIdea });
+  } catch (err: any) {
+    return res.status(500).json({ error: "소통 기록 등록 실패: " + err.message });
+  }
+});
 
 // Serve static asset fallback and boot
 async function bootstrap() {
