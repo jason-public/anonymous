@@ -30,11 +30,13 @@ CREATE TABLE IF NOT EXISTS public.users (
   password text, -- NULL 가능으로 유연하게 설정 (보안 통제)
   nickname text,
   role text DEFAULT 'User',
+  passcode text, -- 회원가입 승인 시 사용된 암호번호 저장
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 기존 테이블이 존재할 경우 대비하여 password 제약 조건 DROP 처리
+-- 기존 테이블이 존재할 경우 대비하여 password 제약 조건 DROP 처리 및 passcode 컬럼 추가 시도
 ALTER TABLE public.users ALTER COLUMN password DROP NOT NULL;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS passcode text;
 
 -- 2. ideas 테이블 설정
 CREATE TABLE IF NOT EXISTS public.ideas (
@@ -107,19 +109,21 @@ CREATE POLICY "Allow all update notifications" ON public.notifications FOR UPDAT
 CREATE OR REPLACE FUNCTION public.handle_new_auth_user_sync()
 RETURNS trigger AS $$
 BEGIN
-  INSERT INTO public.users (id, email, nickname, role, created_at)
+  INSERT INTO public.users (id, email, nickname, role, passcode, created_at)
   VALUES (
     new.id,
     new.email,
     COALESCE(new.raw_user_meta_data->>'nickname', split_part(new.email, '@', 1)),
     COALESCE(new.raw_user_meta_data->>'role', 'User'),
+    new.raw_user_meta_data->>'passcode',
     COALESCE(new.created_at, now())
   )
   ON CONFLICT (id) DO UPDATE
   SET 
     email = EXCLUDED.email,
     nickname = COALESCE(EXCLUDED.nickname, public.users.nickname),
-    role = COALESCE(EXCLUDED.role, public.users.role);
+    role = COALESCE(EXCLUDED.role, public.users.role),
+    passcode = COALESCE(EXCLUDED.passcode, public.users.passcode);
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

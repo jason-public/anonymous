@@ -9,6 +9,7 @@ export interface DbUser {
   password?: string;
   nickname: string;
   role: "User" | "Admin";
+  passcode?: string;
   created_at?: string;
 }
 
@@ -193,23 +194,45 @@ export async function signUpWithAuth(
   passcode?: string,
   role: "User" | "Admin" = "User"
 ): Promise<AuthResult> {
-  const code = (passcode || "").trim();
-  const validPasscodes = ["1331", "NYJ-2026", "남양주혁신", "2026", "nyj2026", "nyj2114", "1052"];
-  if (!validPasscodes.includes(code)) {
-    throw new Error("발급받은 올바른 암호번호(승인 코드)가 아닙니다. 가입 권한을 확인해 주세요.");
+  // 1) Fortify passcode validation logic
+  const originalCode = (passcode || "").trim();
+  const normalizedCode = originalCode.toLowerCase().replace(/[-_\s]/g, "");
+
+  // Authorized lists of cleaned/normalized passcodes
+  const validNormalizedCodes = ["1331", "nyj2026", "남양주혁신", "2026", "nyj2114", "1052"];
+
+  // Pre-emptive typo guide and error defense for variations of 'nyj2114'
+  if (
+    normalizedCode === "nyj2014" ||
+    normalizedCode === "nyj2214" ||
+    normalizedCode === "nyj211" ||
+    normalizedCode === "nyj214" ||
+    normalizedCode === "nyj114" ||
+    normalizedCode === "ny2114" ||
+    (normalizedCode.startsWith("nyj") && normalizedCode !== "nyj2114" && normalizedCode !== "nyj2026")
+  ) {
+    throw new Error("승인코드 입력이 올바르지 않습니다. 정확한 암호번호인 'nyj2114'를 입력해 주셔요.");
   }
 
+  // Exact validation
+  if (!validNormalizedCodes.includes(normalizedCode)) {
+    throw new Error("발급받은 올바른 암호번호(승인 코드)가 아닙니다. 가입 권한을 확인해 주세요. (가입 승인 코드 예시: nyj2114)");
+  }
+
+  // Store the formatted version they typed 
+  const finalPasscode = originalCode;
   const finalNickname = nickname || email.split("@")[0];
 
   if (supabaseEnabled && supabase) {
-    // 1) Register inside Supabase Auth with custom user metadata options
+    // 1) Register inside Supabase Auth with custom user metadata options including passcode
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password: password || "user123!",
       options: {
         data: {
           nickname: finalNickname,
-          role: role
+          role: role,
+          passcode: finalPasscode
         }
       }
     });
@@ -228,13 +251,14 @@ export async function signUpWithAuth(
 
     const userId = authData.user.id;
 
-    // 2) Write user record to our public.users mapping database table (Fallback manual sync)
+    // 2) Write user record to our public.users mapping database table (including passcode field)
     try {
       const userPayload: any = {
         id: userId,
         email,
         nickname: finalNickname,
-        role
+        role,
+        passcode: finalPasscode
       };
       
       // If password field is required by legacy schemas, we include it, otherwise trigger can drop it if nullable
@@ -265,6 +289,7 @@ export async function signUpWithAuth(
         email,
         nickname: finalNickname,
         role,
+        passcode: finalPasscode
       },
       emailConfirmationRequired: isUnconfirmed
     };
@@ -280,7 +305,8 @@ export async function signUpWithAuth(
       email,
       password: password || "user123",
       nickname: finalNickname,
-      role
+      role,
+      passcode: finalPasscode
     };
 
     db.users.push(localUser);

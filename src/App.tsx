@@ -148,7 +148,14 @@ export default function App() {
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
+      const text = await res.text();
+      let data: any = {};
+      try {
+        data = JSON.parse(text);
+      } catch (jsonErr) {
+        throw new Error(text.substring(0, 150) || '서버에서 알 수 없는 형식의 응답을 받았습니다.');
+      }
+
       if (res.ok) {
         if (data.emailConfirmationRequired) {
           setSuccessMessage(data.message || '가입 인증 메일이 성공적으로 발송되었습니다. 메일의 인증 주소를 확인해 확인해 주셔요.');
@@ -161,8 +168,9 @@ export default function App() {
       } else {
         setAuthError(data.error || '인증 처리에 실패했습니다.');
       }
-    } catch (err) {
-      setAuthError('네트워크 요동으로 연결에 실패했습니다.');
+    } catch (err: any) {
+      console.error("Auth submit fetch error:", err);
+      setAuthError(err.message || '네트워크 요동으로 연결에 실패했습니다.');
     } finally {
       setAuthLoading(false);
     }
