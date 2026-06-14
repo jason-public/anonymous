@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS public.notifications (
 INSERT INTO public.users (id, email, password, nickname, role)
 VALUES 
   ('user_1', 'citizen@nyj.go.kr', 'user123', '남양주시민_홍길동', 'User'),
-  ('user_2', 'admin@nyj.go.kr', 'admin123', '시정기획관_황희', 'Admin')
+  ('user_2', 'prawess@gmail.com', '!ryujh5996', '시정기획관_황희', 'Admin')
 ON CONFLICT (id) DO NOTHING;
 
 -- 6. Row Level Security(RLS) 정책 활성화 및 권한 개방

@@ -194,7 +194,7 @@ export async function signUpWithAuth(
   role: "User" | "Admin" = "User"
 ): Promise<AuthResult> {
   const code = (passcode || "").trim();
-  const validPasscodes = ["1331", "NYJ-2026", "남양주혁신", "2026", "nyj2026", "1052"];
+  const validPasscodes = ["1331", "NYJ-2026", "남양주혁신", "2026", "nyj2026", "nyj2114", "1052"];
   if (!validPasscodes.includes(code)) {
     throw new Error("발급받은 올바른 암호번호(승인 코드)가 아닙니다. 가입 권한을 확인해 주세요.");
   }

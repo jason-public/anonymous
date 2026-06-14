@@ -297,11 +297,11 @@ export default function App() {
                           required
                           value={passcode}
                           onChange={(e) => setPasscode(e.target.value)}
-                          placeholder="발급받은 암호번호 입력 (예시: 1331 또는 NYJ-2026)"
+                          placeholder="발급받은 암호번호 입력 (예시: nyj2114 또는 1331)"
                           className="mt-1.5 w-full rounded-xl border border-blue-100 bg-blue-50/20 px-4 py-2.5 text-xs font-mono font-bold text-blue-900 placeholder:text-blue-400/70 focus:border-blue-500 focus:bg-white focus:outline-hidden text-center tracking-widest"
                         />
                         <p className="mt-1 text-[9.5px] text-slate-400 font-semibold leading-normal">
-                          ※ 도배 방지 및 책임 인증을 위한 조치입니다. 사전에 배포된 암호번호를 입력해야 회원 가입이 접수됩니다. (테스트용: 1331 또는 NYJ-2026)
+                          ※ 도배 방지 및 책임 인증을 위한 조치입니다. 사전에 배포된 암호번호를 입력해야 회원 가입이 접수됩니다. (인증 코드: nyj2114 또는 1331)
                         </p>
                       </div>
                     </div>
