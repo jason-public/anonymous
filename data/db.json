@@ -9,10 +9,24 @@
     },
     {
       "id": "user_2",
-      "email": "admin@nyj.go.kr",
+      "email": "prawess@gmail.com",
       "nickname": "시정기획관_황희",
       "role": "Admin",
-      "password": "admin123"
+      "password": "!ryujh5996"
+    },
+    {
+      "id": "user_1781389454882",
+      "email": "citizen-prawess@gmail.com",
+      "password": "!ryujh5996",
+      "nickname": "남양주1",
+      "role": "User"
+    },
+    {
+      "id": "user_1781389950094",
+      "email": "prawess76@gmail.com",
+      "password": "@jason5996",
+      "nickname": "남양주2",
+      "role": "User"
     }
   ],
   "ideas": [
@@ -67,6 +81,50 @@
       "created_at": "2026-06-13T11:00:00.000Z",
       "attachments": [],
       "admin_notes": ""
+    },
+    {
+      "id": "idea-e2dc2160-0fb3-44e4-a735-de294449c72a",
+      "title": "ㅁㅇㄴㄻ",
+      "content": "ㅁㄴㅇㄻㄴㅇㄻ",
+      "category": "기타",
+      "status": "접수",
+      "summary": "1. [현황 및 필요성] 제안서의 제목 및 상세 내용이 무의미한 한글 자음으로만 구성되어 구체적인 문제 인식 및 필요성 파악이 불가함.\n2. [제안 내용] 교통 등 특정 행정 분야에 대한 구체적인 개선안이나 아이디어가 제시되지 않아 실제적인 검토가 이루어질 수 없음.\n3. [기대 효과] 정상적인 정책 제안 작성을 통해 향후 실질적인 시민 불편 해소 및 행정 신뢰도 제고 효과를 기대할 수 있음.",
+      "similarity_flag": false,
+      "similarity_score": 0,
+      "created_at": "2026-06-13T20:57:05.329Z",
+      "attachments": [
+        {
+          "url": "/uploads/ed3b95a4-b3ed-416c-8855-12e6385bb4df.pdf",
+          "name": "Background.pdf"
+        }
+      ],
+      "admin_notes": "[AI 기술 검토 제언]:\n의미 있는 제안 내용이 부재하여 행정적·기술적 실현 가능성을 평가하기 곤란합니다. 시민 참여 활성화를 위해 구체적인 제안 요소를 갖추어 다시 제안해 주시면 신중히 검토하겠습니다. 따뜻한 참여와 관심에 감사드립니다."
+    },
+    {
+      "id": "idea-1ff01cd1-f0a0-4c5c-a348-e3bcb3923da6",
+      "title": "3333",
+      "content": "3333",
+      "category": "기타",
+      "status": "접수",
+      "summary": "1. [현황 및 필요성] 단순 숫자(3333) 입력으로 구체적인 시정 애로사항 및 행정 개선 필요성 파악이 불가함\n2. [제안 내용] 실질적인 정책 제안 내용이 부재하여 구체적인 검토안 수립 및 대안 마련이 어려움\n3. [기대 효과] 명확한 아이디어와 세부 내용으로 보완되어 재제안될 경우 실질적인 시정 반영 효과를 기대할 수 있음",
+      "similarity_flag": false,
+      "similarity_score": 0,
+      "created_at": "2026-06-13T22:25:09.806Z",
+      "attachments": [],
+      "admin_notes": "[AI 기술 검토 제언]:\n현재 제출된 제안은 내용이 부재하여 행정적·기술적 실현 가능성을 검토하기 어렵습니다. 시민 제안 제도의 취지에 맞게 구체적인 개선 아이디어와 필요성을 기술하여 재접수해 주시면 성심껏 검토하겠습니다. 추후 소중한 의견으로 다시 만나뵐 수 있기를 희망합니다."
+    },
+    {
+      "id": "idea-9dcb7cea-d929-431c-8748-ae9bfb76e356",
+      "title": "5555",
+      "content": "5555",
+      "category": "기타",
+      "status": "접수",
+      "summary": "1. [현황 및 필요성] 단순 숫자(5555)만 기재되어 구체적인 교통 분야의 현황 파악 및 정책적 필요성 도출이 불가능함.\\n2. [제안 내용] 시민의 실생활에 필요한 교통 인프라 개선, 대중교통 확충 등 구체적인 아이디어를 기술하여 재수립할 필요가 있음.\\n3. [기대 효과] 실효성 있는 구체적인 제안이 제출될 경우 교통 편의 증대 및 행정 서비스 만족도 향상이 기대됨.",
+      "similarity_flag": false,
+      "similarity_score": 0,
+      "created_at": "2026-06-13T23:00:02.450Z",
+      "attachments": [],
+      "admin_notes": "[AI 기술 검토 제언]:\n현재 제출된 내용으로는 구체적인 정책적, 기술적 검토를 진행하기 어렵습니다. 향후 교통 불편 사항이나 구체적인 개선 대안을 명시하여 제안해 주신다면 행정적 실현 가능성을 면밀히 검토하여 시정에 적극 반영하도록 노력하겠습니다."
     }
   ],
   "user_ideas": [
@@ -77,6 +135,18 @@
     {
       "user_id": "user_1",
       "idea_id": "idea-seed-3"
+    },
+    {
+      "user_id": "user_1",
+      "idea_id": "idea-e2dc2160-0fb3-44e4-a735-de294449c72a"
+    },
+    {
+      "user_id": "user_1781389454882",
+      "idea_id": "idea-1ff01cd1-f0a0-4c5c-a348-e3bcb3923da6"
+    },
+    {
+      "user_id": "user_1",
+      "idea_id": "idea-9dcb7cea-d929-431c-8748-ae9bfb76e356"
     }
   ],
   "notifications": [
@@ -85,8 +155,32 @@
       "user_id": "user_1",
       "type": "STATUS_CHANGE",
       "message": "제안하신 [다산신도시 스마트 버스정류장 냉난방...] 아이디어가 '채택'되었습니다. 시정 발전에 기여해 주셔서 대단히 감사합니다!",
-      "is_read": false,
+      "is_read": true,
       "created_at": "2026-06-12T16:00:00.000Z"
+    },
+    {
+      "id": "notif-1781384225329",
+      "user_id": "user_1",
+      "type": "SUBMIT_SUCCESS",
+      "message": "제안하신 [ㅁㅇㄴㄻ] 아이디어가 정상 접수되었습니다. AI 실시간 보고서 요약 및 중복성 분석이 완료되어 시정에 기밀하게 반영 중입니다.",
+      "is_read": true,
+      "created_at": "2026-06-13T20:57:05.329Z"
+    },
+    {
+      "id": "notif-1781389509807",
+      "user_id": "user_1781389454882",
+      "type": "SUBMIT_SUCCESS",
+      "message": "제안하신 [3333] 아이디어가 정상 접수되었습니다. AI 실시간 보고서 요약 및 중복성 분석이 완료되어 시정에 기밀하게 반영 중입니다.",
+      "is_read": false,
+      "created_at": "2026-06-13T22:25:09.807Z"
+    },
+    {
+      "id": "notif-1781391602451",
+      "user_id": "user_1",
+      "type": "SUBMIT_SUCCESS",
+      "message": "제안하신 [5555] 아이디어가 정상 접수되었습니다. AI 실시간 보고서 요약 및 중복성 분석이 완료되어 시정에 기밀하게 반영 중입니다.",
+      "is_read": true,
+      "created_at": "2026-06-13T23:00:02.451Z"
     }
   ]
 }

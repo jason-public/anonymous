@@ -169,8 +169,8 @@ export default function App() {
   };
 
   const handleDemoLogin = async (role: 'User' | 'Admin') => {
-    setEmail(role === 'User' ? 'citizen@nyj.go.kr' : 'admin@nyj.go.kr');
-    setPassword(role === 'User' ? 'user123' : 'admin123');
+    setEmail(role === 'User' ? 'citizen@nyj.go.kr' : 'prawess@gmail.com');
+    setPassword(role === 'User' ? 'user123' : '!ryujh5996');
     setAuthMode('login');
     setAuthError('');
     setAuthLoading(true);

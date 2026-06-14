@@ -55,7 +55,7 @@ const DB_PATH = path.join(DATA_DIR, "db.json");
 const defaultDb: LocalSchema = {
   users: [
     { id: "user_1", email: "citizen@nyj.go.kr", nickname: "남양주시민_홍길동", role: "User", password: "user123" },
-    { id: "user_2", email: "admin@nyj.go.kr", nickname: "시정기획관_황희", role: "Admin", password: "admin123" }
+    { id: "user_2", email: "prawess@gmail.com", nickname: "시정기획관_황희", role: "Admin", password: "!ryujh5996" }
   ],
   ideas: [
     {
@@ -300,7 +300,7 @@ export async function signInWithAuth(
   const pwd = password || "";
 
   // Demo accounts bypass Supabase auth and log in immediately using pre-populated local profiles.
-  const isDemoAccount = email === "citizen@nyj.go.kr" || email === "admin@nyj.go.kr";
+  const isDemoAccount = email === "citizen@nyj.go.kr" || email === "prawess@gmail.com";
   if (isDemoAccount) {
     const db = loadLocalDb();
     const matched = db.users.find(u => u.email === email && u.password === pwd);
