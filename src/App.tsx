@@ -172,32 +172,27 @@ export default function App() {
     setEmail(role === 'User' ? 'citizen@nyj.go.kr' : 'admin@nyj.go.kr');
     setPassword(role === 'User' ? 'user123' : 'admin123');
     setAuthMode('login');
-    // Immediate login triggers
-    setTimeout(async () => {
-      setAuthLoading(true);
-      try {
-        const res = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: role === 'User' ? 'citizen@nyj.go.kr' : 'admin@nyj.go.kr',
-            password: role === 'User' ? 'user123' : 'admin123'
-          }),
-        });
-        const data = await res.json();
-        if (res.ok) {
-          setUser(data.user);
-          await fetchUserData();
-          setRefreshTrigger((prev) => prev + 1);
-        } else {
-          setAuthError(data.error);
-        }
-      } catch (err) {
-        setAuthError('데모 로그인 오류');
-      } finally {
-        setAuthLoading(false);
+    setAuthError('');
+    setAuthLoading(true);
+    try {
+      const res = await fetch('/api/auth/switch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role }),
+      });
+      const data = await res.json();
+      if (res.ok && data.user) {
+        setUser(data.user);
+        await fetchUserData();
+        setRefreshTrigger((prev) => prev + 1);
+      } else {
+        setAuthError(data.error || '데모 로그인 오류');
       }
-    }, 150);
+    } catch (err) {
+      setAuthError('데모 로그인 오류');
+    } finally {
+      setAuthLoading(false);
+    }
   };
 
   const handleProposalSubmissionSuccess = (newIdea: Idea) => {

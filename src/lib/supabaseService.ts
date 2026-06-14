@@ -299,6 +299,19 @@ export async function signInWithAuth(
 ): Promise<AuthResult> {
   const pwd = password || "";
 
+  // Demo accounts bypass Supabase auth and log in immediately using pre-populated local profiles.
+  const isDemoAccount = email === "citizen@nyj.go.kr" || email === "admin@nyj.go.kr";
+  if (isDemoAccount) {
+    const db = loadLocalDb();
+    const matched = db.users.find(u => u.email === email && u.password === pwd);
+    if (matched) {
+      return {
+        user: matched,
+        emailConfirmationRequired: false
+      };
+    }
+  }
+
   if (supabaseEnabled && supabase) {
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
